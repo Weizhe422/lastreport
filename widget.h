@@ -127,6 +127,7 @@ private:
     void updateSubtitleDisplay();  // Helper to update subtitle display for current video
     void restoreCurrentVideoTitle();
     void updateLocalMusicDisplay(const QString& title, const QString& fileName, const QString& subtitles);
+    void updateVolumeIcon(int volume);  // Helper to update volume icon based on volume level
     
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

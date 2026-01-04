@@ -1672,11 +1672,16 @@ void Widget::onVolumeSliderChanged(int value)
     audioOutput->setVolume(volume);
     
     // 更新音量圖標
-    if (value == 0) {
+    updateVolumeIcon(value);
+}
+
+void Widget::updateVolumeIcon(int volume)
+{
+    if (volume == 0) {
         volumeLabel->setText("🔇");
-    } else if (value < 33) {
+    } else if (volume < 33) {
         volumeLabel->setText("🔈");
-    } else if (value < 66) {
+    } else if (volume < 66) {
         volumeLabel->setText("🔉");
     } else {
         volumeLabel->setText("🔊");
@@ -1953,23 +1958,13 @@ void Widget::onVolumeLabelClicked()
         isMuted = false;
         volumeSlider->setValue(previousVolume);
         audioOutput->setVolume(previousVolume / 100.0);
-        
-        // 更新圖標
-        if (previousVolume == 0) {
-            volumeLabel->setText("🔇");
-        } else if (previousVolume < 33) {
-            volumeLabel->setText("🔈");
-        } else if (previousVolume < 66) {
-            volumeLabel->setText("🔉");
-        } else {
-            volumeLabel->setText("🔊");
-        }
+        updateVolumeIcon(previousVolume);
     } else {
         // 靜音，保存當前音量
         previousVolume = volumeSlider->value();
         isMuted = true;
         volumeSlider->setValue(0);
         audioOutput->setVolume(0.0);
-        volumeLabel->setText("🔇");
+        updateVolumeIcon(0);
     }
 }
