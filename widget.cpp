@@ -204,7 +204,7 @@ void Widget::setupUI()
         "QPushButton:pressed { background-color: #505050; }"
         "QPushButton:disabled { background-color: #181818; color: #404040; }"
     );
-    loadSubtitleButton->setEnabled(false);  // 預設禁用，播放音樂時才啟用
+    loadSubtitleButton->setEnabled(false);  // 初始狀態禁用，僅在播放音樂時啟用
     loadSubtitleButton->setToolTip("載入 .srt 字幕檔案");
     topLayout->addWidget(loadSubtitleButton);
     
@@ -1206,7 +1206,7 @@ void Widget::updateButtonStates()
     addToPlaylistButton->setEnabled(hasMediaPlaying && hasTargetPlaylists);
     targetPlaylistComboBox->setEnabled(hasMediaPlaying && hasTargetPlaylists);
     
-    // 更新載入字幕按鈕狀態 - 只在播放中才啟用
+    // 更新載入字幕按鈕狀態 - 只在播放中才啟用，確保用戶體驗與按鈕提示一致
     loadSubtitleButton->setEnabled(isPlaying);
 }
 
