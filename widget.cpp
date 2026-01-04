@@ -188,62 +188,104 @@ Widget::~Widget()
     delete ui;
 }
 
+// 設定使用者介面的函式，建立所有 UI 元件和佈局
 void Widget::setupUI()
 {
-    // 主佈局
+    // 創建主垂直佈局管理器，並設定為此視窗的佈局
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    // 設定佈局內元件間距為 0
     mainLayout->setSpacing(0);
+    // 設定佈局邊距為 0（左、上、右、下）
     mainLayout->setContentsMargins(0, 0, 0, 0);
     
-    // 設置深色主題
+    // 設置深色主題樣式表
     setStyleSheet(
+        // 所有 QWidget 元件的基本樣式
         "QWidget {"
+        // 設定背景顏色為深灰黑色
         "   background-color: #121212;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
         "}"
+        // QLineEdit（單行文字輸入框）的樣式
         "QLineEdit {"
+        // 設定背景顏色為較淺的灰色
         "   background-color: #282828;"
+        // 設定邊框為 1px 實線深灰色
         "   border: 1px solid #404040;"
+        // 設定圓角半徑為 20px
         "   border-radius: 20px;"
+        // 設定內邊距（上下 8px，左右 16px）
         "   padding: 8px 16px;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
+        // 設定字體大小為 14px
         "   font-size: 14px;"
         "}"
+        // QLineEdit 獲得焦點時的樣式
         "QLineEdit:focus {"
+        // 設定邊框顏色為 Spotify 綠色
         "   border: 1px solid #1DB954;"
         "}"
+        // QListWidget（清單視窗）的樣式
         "QListWidget {"
+        // 設定背景顏色為深灰色
         "   background-color: #181818;"
+        // 移除邊框
         "   border: none;"
+        // 移除選取框
         "   outline: none;"
         "}"
+        // QListWidget 項目的樣式
         "QListWidget::item {"
+        // 設定內邊距為 10px
         "   padding: 10px;"
+        // 設定底部邊框為 1px 實線深灰色
         "   border-bottom: 1px solid #282828;"
+        // 設定文字顏色為淺灰色
         "   color: #B3B3B3;"
         "}"
+        // QListWidget 項目滑鼠懸停時的樣式
         "QListWidget::item:hover {"
+        // 設定背景顏色為較深的灰色
         "   background-color: #282828;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
         "}"
+        // QListWidget 項目被選取時的樣式
         "QListWidget::item:selected {"
+        // 設定背景顏色為 Spotify 綠色
         "   background-color: #1DB954;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
         "}"
+        // QComboBox（下拉選單）的樣式
         "QComboBox {"
+        // 設定背景顏色為深灰色
         "   background-color: #282828;"
+        // 設定邊框為 1px 實線深灰色
         "   border: 1px solid #404040;"
+        // 設定圓角半徑為 4px
         "   border-radius: 4px;"
+        // 設定內邊距為 8px
         "   padding: 8px;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
+        // 設定最小寬度為 150px
         "   min-width: 150px;"
         "}"
+        // QComboBox 下拉按鈕的樣式
         "QComboBox::drop-down {"
+        // 移除邊框
         "   border: none;"
         "}"
+        // QComboBox 下拉清單的樣式
         "QComboBox QAbstractItemView {"
+        // 設定背景顏色為深灰色
         "   background-color: #282828;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
+        // 設定選取項目的背景顏色為 Spotify 綠色
         "   selection-background-color: #1DB954;"
         "}"
     );
