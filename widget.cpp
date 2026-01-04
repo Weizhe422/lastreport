@@ -17,6 +17,7 @@
 #include <QDesktopServices>
 #include <QTimer>
 #include <QMenu>
+#include <QMouseEvent>
 #include <cmath>
 
 Widget::Widget(QWidget *parent)
@@ -1657,13 +1658,13 @@ void Widget::onProgressSliderMoved(int position)
 
 void Widget::onVolumeSliderChanged(int value)
 {
-    // 如果用戶手動調整音量滑桿，取消靜音狀態
+    // 如果用戶手動調整音量滑桿到非零值，取消靜音狀態
     if (isMuted && value > 0) {
         isMuted = false;
     }
     
-    // 更新 previousVolume 如果不是靜音狀態
-    if (!isMuted && value > 0) {
+    // 更新 previousVolume 當音量大於0時
+    if (value > 0) {
         previousVolume = value;
     }
     
@@ -1945,8 +1946,11 @@ void Widget::onDeleteFromPlaylist()
 bool Widget::eventFilter(QObject *obj, QEvent *event)
 {
     if (obj == volumeLabel && event->type() == QEvent::MouseButtonPress) {
-        onVolumeLabelClicked();
-        return true;
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+        if (mouseEvent->button() == Qt::LeftButton) {
+            onVolumeLabelClicked();
+            return true;
+        }
     }
     return QWidget::eventFilter(obj, event);
 }
@@ -1956,9 +1960,11 @@ void Widget::onVolumeLabelClicked()
     if (isMuted) {
         // 取消靜音，恢復之前的音量
         isMuted = false;
-        volumeSlider->setValue(previousVolume);
-        audioOutput->setVolume(previousVolume / 100.0);
-        updateVolumeIcon(previousVolume);
+        // 確保至少有最小音量（避免從0恢復到0的情況）
+        int restoreVolume = (previousVolume > 0) ? previousVolume : 50;
+        volumeSlider->setValue(restoreVolume);
+        audioOutput->setVolume(restoreVolume / 100.0);
+        updateVolumeIcon(restoreVolume);
     } else {
         // 靜音，保存當前音量
         previousVolume = volumeSlider->value();
