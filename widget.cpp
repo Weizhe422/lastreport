@@ -780,6 +780,32 @@ void Widget::playLocalFile(const QString& filePath)
     video.isFavorite = false;
     video.isLocalFile = true;
     
+    // 檢查當前播放清單是否有效
+    if (currentPlaylistIndex >= 0 && currentPlaylistIndex < playlists.size()) {
+        Playlist& playlist = playlists[currentPlaylistIndex];
+        
+        // 檢查檔案是否已存在於播放清單中
+        int existingIndex = -1;
+        for (int i = 0; i < playlist.videos.size(); i++) {
+            if (playlist.videos[i].filePath == filePath) {
+                existingIndex = i;
+                break;
+            }
+        }
+        
+        if (existingIndex >= 0) {
+            // 檔案已存在，直接播放
+            currentVideoIndex = existingIndex;
+            video = playlist.videos[existingIndex];
+        } else {
+            // 檔案不存在，加入播放清單
+            playlist.videos.append(video);
+            currentVideoIndex = playlist.videos.size() - 1;
+            savePlaylistsToFile();
+            updatePlaylistDisplay();
+        }
+    }
+    
     // 設置媒體播放器
     mediaPlayer->setSource(QUrl::fromLocalFile(filePath));
     mediaPlayer->play();
@@ -792,12 +818,17 @@ void Widget::playLocalFile(const QString& filePath)
     // 更新播放狀態
     isPlaying = true;
     playPauseButton->setText("⏸");
-    currentVideoIndex = -1;  // 不屬於播放清單
     
     updateButtonStates();
     
-    // 啟動 Whisper 轉錄
-    startWhisperTranscription(filePath);
+    // 檢查是否有保存的字幕
+    if (!video.subtitlePath.isEmpty() && QFile::exists(video.subtitlePath)) {
+        // 自動載入已保存的字幕
+        loadSrt(video.subtitlePath);
+    } else {
+        // 啟動 Whisper 轉錄
+        startWhisperTranscription(filePath);
+    }
 }
 
 void Widget::onPlayPauseClicked()
