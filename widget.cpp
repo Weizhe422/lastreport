@@ -70,94 +70,121 @@ namespace {
     };
 }
 
+// Widget 類別的建構函式，初始化所有成員變數
 Widget::Widget(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::Widget)
-    , mediaPlayer(new QMediaPlayer(this))
-    , audioOutput(new QAudioOutput(this))
-    , videoDisplayArea(nullptr)
-    , whisperProcess(new QProcess(this))
-    , currentPlaylistIndex(-1)
-    , currentVideoIndex(-1)
-    , isShuffleMode(false)
-    , isRepeatMode(false)
-    , isPlaying(false)
-    , isProgressSliderPressed(false)
-    , isMuted(false)
-    , previousVolume(50)
-    , isSwitchingSongs(false)
-    , subtitleTimestampRegex(R"(\[(\d+\.?\d*)s\s*-\s*(\d+\.?\d*)s\])")
-    , srtTimestampRegex(R"((\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3}))")
-    , sequenceNumberRegex(R"(^\d+$)")
-    , currentSubtitles("")
-    , titleRestoreTimer(new QTimer(this))
+    : QWidget(parent)  // 呼叫父類別的建構函式
+    , ui(new Ui::Widget)  // 創建 UI 物件
+    , mediaPlayer(new QMediaPlayer(this))  // 創建媒體播放器物件
+    , audioOutput(new QAudioOutput(this))  // 創建音訊輸出物件
+    , videoDisplayArea(nullptr)  // 初始化影片顯示區域為 null
+    , whisperProcess(new QProcess(this))  // 創建 Whisper 外部程序物件
+    , currentPlaylistIndex(-1)  // 初始化當前播放清單索引為 -1（無選擇）
+    , currentVideoIndex(-1)  // 初始化當前影片索引為 -1（無選擇）
+    , isShuffleMode(false)  // 初始化隨機播放模式為關閉
+    , isRepeatMode(false)  // 初始化循環播放模式為關閉
+    , isPlaying(false)  // 初始化播放狀態為停止
+    , isProgressSliderPressed(false)  // 初始化進度條按下狀態為否
+    , isMuted(false)  // 初始化靜音狀態為否
+    , previousVolume(50)  // 初始化先前音量為 50%
+    , isSwitchingSongs(false)  // 初始化切換歌曲旗標為否
+    , subtitleTimestampRegex(R"(\[(\d+\.?\d*)s\s*-\s*(\d+\.?\d*)s\])")  // 初始化字幕時間戳正則表達式
+    , srtTimestampRegex(R"((\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3}))")  // 初始化 SRT 時間戳正則表達式
+    , sequenceNumberRegex(R"(^\d+$)")  // 初始化序號正則表達式
+    , currentSubtitles("")  // 初始化當前字幕為空字串
+    , titleRestoreTimer(new QTimer(this))  // 創建標題恢復計時器物件
 {
+    // 設定 UI 元件
     ui->setupUi(this);
     
-    // 設置媒體播放器
+    // 設置媒體播放器，將音訊輸出連接到播放器
     mediaPlayer->setAudioOutput(audioOutput);
+    // 設定音訊輸出音量為 50%（0.5）
     audioOutput->setVolume(0.5);
     
-    // 設置標題恢復計時器
+    // 設置標題恢復計時器為單次觸發
     titleRestoreTimer->setSingleShot(true);
+    // 連接計時器逾時信號到恢復標題的槽函式
     connect(titleRestoreTimer, &QTimer::timeout, this, &Widget::restoreCurrentVideoTitle);
     
-    // 設置窗口
+    // 設置主視窗標題
     setWindowTitle("音樂播放器");
+    // 設置主視窗最小尺寸為 1000x700
     setMinimumSize(1000, 700);
     
-    // 建立UI
+    // 呼叫函式建立使用者介面
     setupUI();
     
-    // 建立信號連接
+    // 呼叫函式建立信號與槽的連接
     createConnections();
     
-    // 加載保存的播放清單
+    // 從檔案載入已保存的播放清單
     loadPlaylistsFromFile();
     
-    // 如果沒有播放清單，創建默認播放清單
+    // 檢查是否沒有任何播放清單
     if (playlists.isEmpty()) {
+        // 創建預設播放清單物件
         Playlist defaultPlaylist;
+        // 設定播放清單名稱
         defaultPlaylist.name = "我的播放清單";
+        // 將播放清單加入清單中
         playlists.append(defaultPlaylist);
         
+        // 創建我的最愛播放清單物件
         Playlist favoritesPlaylist;
+        // 設定播放清單名稱
         favoritesPlaylist.name = "我的最愛";
+        // 將播放清單加入清單中
+        // 將播放清單加入清單中
         playlists.append(favoritesPlaylist);
         
+        // 將預設播放清單名稱加入到下拉選單
         playlistComboBox->addItem(defaultPlaylist.name);
+        // 將我的最愛播放清單名稱加入到下拉選單
         playlistComboBox->addItem(favoritesPlaylist.name);
+        // 設定當前播放清單索引為 0（第一個播放清單）
         currentPlaylistIndex = 0;
     } else {
-        // 恢復播放清單到ComboBox
+        // 如果已有播放清單，恢復播放清單到下拉選單
+        // 遍歷所有播放清單
         for (const Playlist& playlist : playlists) {
+            // 將播放清單名稱加入到下拉選單
             playlistComboBox->addItem(playlist.name);
         }
         
-        // 恢復上次的播放清單
+        // 恢復上次使用的播放清單
+        // 初始化上次使用的索引為 0
         int lastIndex = 0;
+        // 遍歷所有播放清單尋找上次使用的播放清單
         for (int i = 0; i < playlists.size(); i++) {
+            // 如果播放清單名稱與上次使用的名稱相符
             if (playlists[i].name == lastPlaylistName) {
+                // 記錄索引
                 lastIndex = i;
+                // 跳出迴圈
                 break;
             }
         }
+        // 設定下拉選單的當前索引為上次使用的索引
         playlistComboBox->setCurrentIndex(lastIndex);
+        // 更新當前播放清單索引
         currentPlaylistIndex = lastIndex;
+        // 更新播放清單顯示
         updatePlaylistDisplay();
     }
     
-    // 更新目標播放清單下拉選單
+    // 更新目標播放清單下拉選單（用於加入歌曲到其他播放清單）
     updateTargetPlaylistComboBox();
     
-    // 更新按鈕狀態
+    // 更新所有按鈕的啟用/停用狀態
     updateButtonStates();
 }
 
+// Widget 類別的解構函式，負責清理資源
 Widget::~Widget()
 {
-    // 保存播放清單
+    // 將播放清單儲存到檔案
     savePlaylistsToFile();
+    // 刪除 UI 物件，釋放記憶體
     delete ui;
 }
 
