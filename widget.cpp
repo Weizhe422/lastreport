@@ -429,7 +429,7 @@ void Widget::setupUI()
     controlLayout->addWidget(volumeLabel);
     
     volumeSlider = new QSlider(Qt::Horizontal, controlWidget);
-    volumeSlider->setRange(0, 100);
+    volumeSlider->setRange(1, 100);
     volumeSlider->setValue(50);
     volumeSlider->setMaximumWidth(100);
     volumeSlider->setStyleSheet(
@@ -1469,8 +1469,8 @@ QString Widget::generateLocalMusicHTML(const QString& title, const QString& file
         "</style>"
         "</head>"
         "<body>"
-        "<h2>🎵 本地音樂</h2>"
-        "<p>%2</p>"
+        "<h2>🎵 %2</h2>"
+        "<p style='font-size: 14px; color: #888;'>本地音樂</p>"
         "<div class='subtitle-section' id='subtitle-area'>"
         "<div class='subtitle-title'>📝 字幕</div>"
         "<div class='subtitle-content' id='subtitle-content'>正在載入字幕，點擊時間戳可跳轉到該位置...</div>"
@@ -1585,8 +1585,8 @@ void Widget::updateLocalMusicDisplay(const QString& title, const QString& fileNa
         "</style>"
         "</head>"
         "<body>"
-        "<h2>🎵 本地音樂</h2>"
-        "<p>%2</p>"
+        "<h2>🎵 %2</h2>"
+        "<p style='font-size: 14px; color: #888;'>本地音樂</p>"
         "<div class='subtitle-section'>"
         "<div class='subtitle-title'>📝 字幕</div>"
         "<div class='subtitle-content'>%3</div>"
@@ -1664,17 +1664,15 @@ void Widget::onProgressSliderMoved(int position)
 
 void Widget::onVolumeSliderChanged(int value)
 {
-    // 如果用戶手動調整音量滑桿到非零值，取消靜音狀態
-    if (isMuted && value > 0) {
+    // 如果用戶手動調整音量滑桿，取消靜音狀態
+    if (isMuted) {
         isMuted = false;
     }
     
-    // 更新 previousVolume 當音量大於0時
-    if (value > 0) {
-        previousVolume = value;
-    }
+    // 更新 previousVolume
+    previousVolume = value;
     
-    // 設置音量（0.0 到 1.0）
+    // 設置音量（0.01 到 1.0，確保最小音量為1%）
     qreal volume = value / 100.0;
     audioOutput->setVolume(volume);
     
@@ -1967,7 +1965,7 @@ void Widget::onVolumeLabelClicked()
         // 取消靜音，恢復之前的音量
         isMuted = false;
         // 確保至少有最小音量（避免從0恢復到0的情況）
-        int restoreVolume = (previousVolume > 0) ? previousVolume : 50;
+        int restoreVolume = (previousVolume >= 1) ? previousVolume : 50;
         volumeSlider->setValue(restoreVolume);
         audioOutput->setVolume(restoreVolume / 100.0);
         updateVolumeIcon(restoreVolume);
@@ -1975,7 +1973,7 @@ void Widget::onVolumeLabelClicked()
         // 靜音，保存當前音量
         previousVolume = volumeSlider->value();
         isMuted = true;
-        volumeSlider->setValue(0);
+        // 直接設置音量為0，但不改變滑桿位置
         audioOutput->setVolume(0.0);
         updateVolumeIcon(0);
     }
