@@ -36,7 +36,9 @@ function initLyrics() {
         lyricLine.addEventListener('click', function() {
             audioPlayer.currentTime = parseFloat(this.dataset.time);
             if (audioPlayer.paused) {
-                audioPlayer.play();
+                audioPlayer.play().catch(e => {
+                    console.log('Auto-play prevented by browser:', e);
+                });
             }
         });
         
