@@ -68,6 +68,7 @@ private slots:
     
     // 本地檔案載入
     void onLoadLocalFileClicked();
+    void onLoadSubtitleFileClicked();
     
     // 播放清單管理
     void onVideoDoubleClicked(QListWidgetItem* item);
@@ -139,6 +140,7 @@ private:
     
     // UI 元件
     QPushButton* loadLocalFileButton;
+    QPushButton* loadSubtitleButton;
     QLabel* videoTitleLabel;
     QLabel* channelLabel;
     QPushButton* playPauseButton;
