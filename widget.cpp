@@ -1,193 +1,290 @@
+// 引入自定義的 Widget 類別標頭檔
 #include "widget.h"
+// 引入 UI 自動產生的標頭檔
 #include "ui_widget.h"
+// 引入 Qt 垂直佈局管理器類別
 #include <QVBoxLayout>
+// 引入 Qt 水平佈局管理器類別
 #include <QHBoxLayout>
+// 引入 Qt 網格佈局管理器類別
 #include <QGridLayout>
+// 引入 Qt 群組框類別
 #include <QGroupBox>
+// 引入 Qt 檔案處理類別
 #include <QFile>
+// 引入 Qt 檔案資訊類別
 #include <QFileInfo>
+// 引入 Qt 目錄處理類別
 #include <QDir>
+// 引入 Qt 隨機數產生器類別
 #include <QRandomGenerator>
+// 引入 Qt 標準路徑取得類別
 #include <QStandardPaths>
+// 引入 Qt 分割視窗類別
 #include <QSplitter>
+// 引入 Qt 正則表達式類別
 #include <QRegularExpression>
+// 引入 Qt 文字瀏覽器類別
 #include <QTextBrowser>
+// 引入 Qt 文字串流類別
 #include <QTextStream>
+// 引入 Qt 外部程序類別
 #include <QProcess>
+// 引入 Qt 桌面服務類別
 #include <QDesktopServices>
+// 引入 Qt 計時器類別
 #include <QTimer>
+// 引入 Qt 選單類別
 #include <QMenu>
+// 引入 Qt 滑鼠事件類別
 #include <QMouseEvent>
+// 引入 C++ 數學函式庫
 #include <cmath>
 
-// Anonymous namespace to keep SongSwitchGuard local to this translation unit
+// 匿名命名空間，將 SongSwitchGuard 類別限制在此翻譯單元內
 namespace {
-    // RAII helper class to manage isSwitchingSongs flag
+    // RAII 輔助類別，用於管理 isSwitchingSongs 旗標
     class SongSwitchGuard {
     public:
+        // 建構函式，接收旗標參考並將其設為 true
         explicit SongSwitchGuard(bool& flag) : m_flag(flag) {
+            // 設定旗標為 true，表示正在切換歌曲
             m_flag = true;
         }
+        // 解構函式，自動將旗標設回 false
         ~SongSwitchGuard() {
+            // 重置旗標為 false，表示歌曲切換完成
             m_flag = false;
         }
-        // Prevent copying and moving
+        // 防止複製建構函式（刪除）
         SongSwitchGuard(const SongSwitchGuard&) = delete;
+        // 防止複製賦值運算子（刪除）
         SongSwitchGuard& operator=(const SongSwitchGuard&) = delete;
+        // 防止移動建構函式（刪除）
         SongSwitchGuard(SongSwitchGuard&&) = delete;
+        // 防止移動賦值運算子（刪除）
         SongSwitchGuard& operator=(SongSwitchGuard&&) = delete;
     private:
+        // 儲存旗標的參考
         bool& m_flag;
     };
 }
 
+// Widget 類別的建構函式，初始化所有成員變數
 Widget::Widget(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::Widget)
-    , mediaPlayer(new QMediaPlayer(this))
-    , audioOutput(new QAudioOutput(this))
-    , videoDisplayArea(nullptr)
-    , whisperProcess(new QProcess(this))
-    , currentPlaylistIndex(-1)
-    , currentVideoIndex(-1)
-    , isShuffleMode(false)
-    , isRepeatMode(false)
-    , isPlaying(false)
-    , isProgressSliderPressed(false)
-    , isMuted(false)
-    , previousVolume(50)
-    , isSwitchingSongs(false)
-    , subtitleTimestampRegex(R"(\[(\d+\.?\d*)s\s*-\s*(\d+\.?\d*)s\])")
-    , srtTimestampRegex(R"((\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3}))")
-    , sequenceNumberRegex(R"(^\d+$)")
-    , currentSubtitles("")
-    , titleRestoreTimer(new QTimer(this))
+    : QWidget(parent)  // 呼叫父類別的建構函式
+    , ui(new Ui::Widget)  // 創建 UI 物件
+    , mediaPlayer(new QMediaPlayer(this))  // 創建媒體播放器物件
+    , audioOutput(new QAudioOutput(this))  // 創建音訊輸出物件
+    , videoDisplayArea(nullptr)  // 初始化影片顯示區域為 null
+    , whisperProcess(new QProcess(this))  // 創建 Whisper 外部程序物件
+    , currentPlaylistIndex(-1)  // 初始化當前播放清單索引為 -1（無選擇）
+    , currentVideoIndex(-1)  // 初始化當前影片索引為 -1（無選擇）
+    , isShuffleMode(false)  // 初始化隨機播放模式為關閉
+    , isRepeatMode(false)  // 初始化循環播放模式為關閉
+    , isPlaying(false)  // 初始化播放狀態為停止
+    , isProgressSliderPressed(false)  // 初始化進度條按下狀態為否
+    , isMuted(false)  // 初始化靜音狀態為否
+    , previousVolume(50)  // 初始化先前音量為 50%
+    , isSwitchingSongs(false)  // 初始化切換歌曲旗標為否
+    , subtitleTimestampRegex(R"(\[(\d+\.?\d*)s\s*-\s*(\d+\.?\d*)s\])")  // 初始化字幕時間戳正則表達式
+    , srtTimestampRegex(R"((\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3}))")  // 初始化 SRT 時間戳正則表達式
+    , sequenceNumberRegex(R"(^\d+$)")  // 初始化序號正則表達式
+    , currentSubtitles("")  // 初始化當前字幕為空字串
+    , titleRestoreTimer(new QTimer(this))  // 創建標題恢復計時器物件
 {
+    // 設定 UI 元件
     ui->setupUi(this);
     
-    // 設置媒體播放器
+    // 設置媒體播放器，將音訊輸出連接到播放器
     mediaPlayer->setAudioOutput(audioOutput);
+    // 設定音訊輸出音量為 50%（0.5）
     audioOutput->setVolume(0.5);
     
-    // 設置標題恢復計時器
+    // 設置標題恢復計時器為單次觸發
     titleRestoreTimer->setSingleShot(true);
+    // 連接計時器逾時信號到恢復標題的槽函式
     connect(titleRestoreTimer, &QTimer::timeout, this, &Widget::restoreCurrentVideoTitle);
     
-    // 設置窗口
+    // 設置主視窗標題
     setWindowTitle("音樂播放器");
+    // 設置主視窗最小尺寸為 1000x700
     setMinimumSize(1000, 700);
     
-    // 建立UI
+    // 呼叫函式建立使用者介面
     setupUI();
     
-    // 建立信號連接
+    // 呼叫函式建立信號與槽的連接
     createConnections();
     
-    // 加載保存的播放清單
+    // 從檔案載入已保存的播放清單
     loadPlaylistsFromFile();
     
-    // 如果沒有播放清單，創建默認播放清單
+    // 檢查是否沒有任何播放清單
     if (playlists.isEmpty()) {
+        // 創建預設播放清單物件
         Playlist defaultPlaylist;
+        // 設定播放清單名稱
         defaultPlaylist.name = "我的播放清單";
+        // 將播放清單加入清單中
         playlists.append(defaultPlaylist);
         
+        // 創建我的最愛播放清單物件
         Playlist favoritesPlaylist;
+        // 設定播放清單名稱
         favoritesPlaylist.name = "我的最愛";
+        // 將播放清單加入清單中
         playlists.append(favoritesPlaylist);
         
+        // 將預設播放清單名稱加入到下拉選單
         playlistComboBox->addItem(defaultPlaylist.name);
+        // 將我的最愛播放清單名稱加入到下拉選單
         playlistComboBox->addItem(favoritesPlaylist.name);
+        // 設定當前播放清單索引為 0（第一個播放清單）
         currentPlaylistIndex = 0;
     } else {
-        // 恢復播放清單到ComboBox
+        // 如果已有播放清單，恢復播放清單到下拉選單
+        // 遍歷所有播放清單
         for (const Playlist& playlist : playlists) {
+            // 將播放清單名稱加入到下拉選單
             playlistComboBox->addItem(playlist.name);
         }
         
-        // 恢復上次的播放清單
+        // 恢復上次使用的播放清單
+        // 初始化上次使用的索引為 0
         int lastIndex = 0;
+        // 遍歷所有播放清單尋找上次使用的播放清單
         for (int i = 0; i < playlists.size(); i++) {
+            // 如果播放清單名稱與上次使用的名稱相符
             if (playlists[i].name == lastPlaylistName) {
+                // 記錄索引
                 lastIndex = i;
+                // 跳出迴圈
                 break;
             }
         }
+        // 設定下拉選單的當前索引為上次使用的索引
         playlistComboBox->setCurrentIndex(lastIndex);
+        // 更新當前播放清單索引
         currentPlaylistIndex = lastIndex;
+        // 更新播放清單顯示
         updatePlaylistDisplay();
     }
     
-    // 更新目標播放清單下拉選單
+    // 更新目標播放清單下拉選單（用於加入歌曲到其他播放清單）
     updateTargetPlaylistComboBox();
     
-    // 更新按鈕狀態
+    // 更新所有按鈕的啟用/停用狀態
     updateButtonStates();
 }
 
+// Widget 類別的解構函式，負責清理資源
 Widget::~Widget()
 {
-    // 保存播放清單
+    // 將播放清單儲存到檔案
     savePlaylistsToFile();
+    // 刪除 UI 物件，釋放記憶體
     delete ui;
 }
 
+// 設定使用者介面的函式，建立所有 UI 元件和佈局
 void Widget::setupUI()
 {
-    // 主佈局
+    // 創建主垂直佈局管理器，並設定為此視窗的佈局
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    // 設定佈局內元件間距為 0
     mainLayout->setSpacing(0);
+    // 設定佈局邊距為 0（左、上、右、下）
     mainLayout->setContentsMargins(0, 0, 0, 0);
     
-    // 設置深色主題
+    // 設置深色主題樣式表
     setStyleSheet(
+        // 所有 QWidget 元件的基本樣式
         "QWidget {"
+        // 設定背景顏色為深灰黑色
         "   background-color: #121212;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
         "}"
+        // QLineEdit（單行文字輸入框）的樣式
         "QLineEdit {"
+        // 設定背景顏色為較淺的灰色
         "   background-color: #282828;"
+        // 設定邊框為 1px 實線深灰色
         "   border: 1px solid #404040;"
+        // 設定圓角半徑為 20px
         "   border-radius: 20px;"
+        // 設定內邊距（上下 8px，左右 16px）
         "   padding: 8px 16px;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
+        // 設定字體大小為 14px
         "   font-size: 14px;"
         "}"
+        // QLineEdit 獲得焦點時的樣式
         "QLineEdit:focus {"
+        // 設定邊框顏色為 Spotify 綠色
         "   border: 1px solid #1DB954;"
         "}"
+        // QListWidget（清單視窗）的樣式
         "QListWidget {"
+        // 設定背景顏色為深灰色
         "   background-color: #181818;"
+        // 移除邊框
         "   border: none;"
+        // 移除選取框
         "   outline: none;"
         "}"
+        // QListWidget 項目的樣式
         "QListWidget::item {"
+        // 設定內邊距為 10px
         "   padding: 10px;"
+        // 設定底部邊框為 1px 實線深灰色
         "   border-bottom: 1px solid #282828;"
+        // 設定文字顏色為淺灰色
         "   color: #B3B3B3;"
         "}"
+        // QListWidget 項目滑鼠懸停時的樣式
         "QListWidget::item:hover {"
+        // 設定背景顏色為較深的灰色
         "   background-color: #282828;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
         "}"
+        // QListWidget 項目被選取時的樣式
         "QListWidget::item:selected {"
+        // 設定背景顏色為 Spotify 綠色
         "   background-color: #1DB954;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
         "}"
+        // QComboBox（下拉選單）的樣式
         "QComboBox {"
+        // 設定背景顏色為深灰色
         "   background-color: #282828;"
+        // 設定邊框為 1px 實線深灰色
         "   border: 1px solid #404040;"
+        // 設定圓角半徑為 4px
         "   border-radius: 4px;"
+        // 設定內邊距為 8px
         "   padding: 8px;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
+        // 設定最小寬度為 150px
         "   min-width: 150px;"
         "}"
+        // QComboBox 下拉按鈕的樣式
         "QComboBox::drop-down {"
+        // 移除邊框
         "   border: none;"
         "}"
+        // QComboBox 下拉清單的樣式
         "QComboBox QAbstractItemView {"
+        // 設定背景顏色為深灰色
         "   background-color: #282828;"
+        // 設定文字顏色為白色
         "   color: #FFFFFF;"
+        // 設定選取項目的背景顏色為 Spotify 綠色
         "   selection-background-color: #1DB954;"
         "}"
     );
