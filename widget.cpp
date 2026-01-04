@@ -134,7 +134,6 @@ Widget::Widget(QWidget *parent)
         // 設定播放清單名稱
         favoritesPlaylist.name = "我的最愛";
         // 將播放清單加入清單中
-        // 將播放清單加入清單中
         playlists.append(favoritesPlaylist);
         
         // 將預設播放清單名稱加入到下拉選單
