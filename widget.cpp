@@ -1672,7 +1672,7 @@ void Widget::onVolumeSliderChanged(int value)
     // 更新 previousVolume
     previousVolume = value;
     
-    // 設置音量（0.01 到 1.0，確保最小音量為1%）
+    // 設置音量（value/100，範圍 1% 到 100%）
     qreal volume = value / 100.0;
     audioOutput->setVolume(volume);
     
