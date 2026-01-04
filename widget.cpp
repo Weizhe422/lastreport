@@ -1174,6 +1174,9 @@ void Widget::playVideo(int index)
         mediaPlayer->setSource(QUrl::fromLocalFile(video.filePath));
         mediaPlayer->play();
         
+        // 清空字幕顯示
+        currentSubtitles = "";
+        
         QFileInfo fileInfo(video.filePath);
         updateLocalMusicDisplay(video.title, fileInfo.fileName(), "");
         
