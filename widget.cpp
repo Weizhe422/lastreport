@@ -17,6 +17,7 @@
 #include <QDesktopServices>
 #include <QTimer>
 #include <QMenu>
+#include <QMouseEvent>
 #include <cmath>
 
 Widget::Widget(QWidget *parent)
@@ -32,6 +33,8 @@ Widget::Widget(QWidget *parent)
     , isRepeatMode(false)
     , isPlaying(false)
     , isProgressSliderPressed(false)
+    , isMuted(false)
+    , previousVolume(50)
     , subtitleTimestampRegex(R"(\[(\d+\.?\d*)s\s*-\s*(\d+\.?\d*)s\])")
     , srtTimestampRegex(R"((\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3}))")
     , sequenceNumberRegex(R"(^\d+$)")
@@ -420,7 +423,9 @@ void Widget::setupUI()
     
     // 音量控制
     volumeLabel = new QLabel("🔊", controlWidget);
-    volumeLabel->setStyleSheet("color: #B3B3B3; font-size: 16px;");
+    volumeLabel->setStyleSheet("color: #B3B3B3; font-size: 16px; cursor: pointer;");
+    volumeLabel->setToolTip("點擊以靜音/取消靜音");
+    volumeLabel->installEventFilter(this);
     controlLayout->addWidget(volumeLabel);
     
     volumeSlider = new QSlider(Qt::Horizontal, controlWidget);
@@ -647,6 +652,14 @@ void Widget::onLoadSubtitleFileClicked()
     if (!filePath.isEmpty()) {
         // 直接載入 SRT 檔案
         loadSrt(filePath);
+        
+        // 保存字幕路徑到當前播放的歌曲
+        if (currentVideoIndex >= 0 && currentPlaylistIndex >= 0 && 
+            currentPlaylistIndex < playlists.size() &&
+            currentVideoIndex < playlists[currentPlaylistIndex].videos.size()) {
+            playlists[currentPlaylistIndex].videos[currentVideoIndex].subtitlePath = filePath;
+            savePlaylistsToFile();
+        }
     }
 }
 
@@ -1167,8 +1180,14 @@ void Widget::playVideo(int index)
         isPlaying = true;
         playPauseButton->setText("⏸");
         
-        // 啟動 Whisper 轉錄
-        startWhisperTranscription(video.filePath);
+        // 檢查是否有保存的字幕
+        if (!video.subtitlePath.isEmpty() && QFile::exists(video.subtitlePath)) {
+            // 自動載入已保存的字幕
+            loadSrt(video.subtitlePath);
+        } else {
+            // 啟動 Whisper 轉錄
+            startWhisperTranscription(video.filePath);
+        }
     } else {
         // 播放 YouTube 影片 - 顯示連結供用戶在瀏覽器中播放
         videoDisplayArea->setHtml(generateYouTubeDisplayHTML(video.title, video.channelTitle, video.videoId));
@@ -1236,6 +1255,7 @@ void Widget::savePlaylistsToFile()
             videoObj["channelTitle"] = video.channelTitle;
             videoObj["thumbnailUrl"] = video.thumbnailUrl;
             videoObj["description"] = video.description;
+            videoObj["subtitlePath"] = video.subtitlePath;
             videoObj["isFavorite"] = video.isFavorite;
             videoObj["isLocalFile"] = video.isLocalFile;
             videosArray.append(videoObj);
@@ -1296,6 +1316,7 @@ void Widget::loadPlaylistsFromFile()
             video.channelTitle = videoObj["channelTitle"].toString();
             video.thumbnailUrl = videoObj["thumbnailUrl"].toString();
             video.description = videoObj["description"].toString();
+            video.subtitlePath = videoObj["subtitlePath"].toString();
             video.isFavorite = videoObj["isFavorite"].toBool();
             video.isLocalFile = videoObj["isLocalFile"].toBool();
             
@@ -1637,16 +1658,31 @@ void Widget::onProgressSliderMoved(int position)
 
 void Widget::onVolumeSliderChanged(int value)
 {
+    // 如果用戶手動調整音量滑桿到非零值，取消靜音狀態
+    if (isMuted && value > 0) {
+        isMuted = false;
+    }
+    
+    // 更新 previousVolume 當音量大於0時
+    if (value > 0) {
+        previousVolume = value;
+    }
+    
     // 設置音量（0.0 到 1.0）
     qreal volume = value / 100.0;
     audioOutput->setVolume(volume);
     
     // 更新音量圖標
-    if (value == 0) {
+    updateVolumeIcon(value);
+}
+
+void Widget::updateVolumeIcon(int volume)
+{
+    if (volume == 0) {
         volumeLabel->setText("🔇");
-    } else if (value < 33) {
+    } else if (volume < 33) {
         volumeLabel->setText("🔈");
-    } else if (value < 66) {
+    } else if (volume < 66) {
         volumeLabel->setText("🔉");
     } else {
         volumeLabel->setText("🔊");
@@ -1837,6 +1873,14 @@ void Widget::onWhisperFinished(int exitCode, QProcess::ExitStatus exitStatus)
         
         // 載入生成的 SRT 檔案
         loadSrt(currentSrtFilePath);
+        
+        // 保存字幕路徑到當前播放的歌曲
+        if (currentVideoIndex >= 0 && currentPlaylistIndex >= 0 && 
+            currentPlaylistIndex < playlists.size() &&
+            currentVideoIndex < playlists[currentPlaylistIndex].videos.size()) {
+            playlists[currentPlaylistIndex].videos[currentVideoIndex].subtitlePath = currentSrtFilePath;
+            savePlaylistsToFile();
+        }
     }
 }
 
@@ -1897,4 +1941,36 @@ void Widget::onDeleteFromPlaylist()
     
     // 保存變更
     savePlaylistsToFile();
+}
+
+bool Widget::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == volumeLabel && event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+        if (mouseEvent->button() == Qt::LeftButton) {
+            onVolumeLabelClicked();
+            return true;
+        }
+    }
+    return QWidget::eventFilter(obj, event);
+}
+
+void Widget::onVolumeLabelClicked()
+{
+    if (isMuted) {
+        // 取消靜音，恢復之前的音量
+        isMuted = false;
+        // 確保至少有最小音量（避免從0恢復到0的情況）
+        int restoreVolume = (previousVolume > 0) ? previousVolume : 50;
+        volumeSlider->setValue(restoreVolume);
+        audioOutput->setVolume(restoreVolume / 100.0);
+        updateVolumeIcon(restoreVolume);
+    } else {
+        // 靜音，保存當前音量
+        previousVolume = volumeSlider->value();
+        isMuted = true;
+        volumeSlider->setValue(0);
+        audioOutput->setVolume(0.0);
+        updateVolumeIcon(0);
+    }
 }

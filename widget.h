@@ -26,6 +26,7 @@
 #include <QTextEdit>
 #include <QTextBrowser>
 #include <QTimer>
+#include <QEvent>
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class Widget;
@@ -40,6 +41,7 @@ struct VideoInfo {
     QString channelTitle;     // 頻道名稱/藝術家
     QString thumbnailUrl;     // 縮圖 URL
     QString description;      // 描述
+    QString subtitlePath;     // 字幕檔案路徑 (SRT 檔案)
     bool isFavorite;          // 是否為喜愛的影片/音樂
     bool isLocalFile;         // 是否為本地檔案
 };
@@ -91,6 +93,7 @@ private slots:
     void onProgressSliderReleased();
     void onProgressSliderMoved(int position);
     void onVolumeSliderChanged(int value);
+    void onVolumeLabelClicked();
     
     // Whisper 輸出
     void onWhisperOutputReady();
@@ -124,6 +127,10 @@ private:
     void updateSubtitleDisplay();  // Helper to update subtitle display for current video
     void restoreCurrentVideoTitle();
     void updateLocalMusicDisplay(const QString& title, const QString& fileName, const QString& subtitles);
+    void updateVolumeIcon(int volume);  // Helper to update volume icon based on volume level
+    
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
     Ui::Widget *ui;
     
@@ -168,6 +175,8 @@ private:
     bool isRepeatMode;
     bool isPlaying;
     bool isProgressSliderPressed;  // 追蹤進度條是否被按下
+    bool isMuted;  // 追蹤是否靜音
+    int previousVolume;  // 保存靜音前的音量
     QString lastPlaylistName;
     QSet<int> playedVideosInCurrentSession;
     QRegularExpression subtitleTimestampRegex;  // Regex pattern for parsing subtitle timestamps
