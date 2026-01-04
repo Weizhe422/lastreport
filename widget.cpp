@@ -1,42 +1,71 @@
+// 引入自定義的 Widget 類別標頭檔
 #include "widget.h"
+// 引入 UI 自動產生的標頭檔
 #include "ui_widget.h"
+// 引入 Qt 垂直佈局管理器類別
 #include <QVBoxLayout>
+// 引入 Qt 水平佈局管理器類別
 #include <QHBoxLayout>
+// 引入 Qt 網格佈局管理器類別
 #include <QGridLayout>
+// 引入 Qt 群組框類別
 #include <QGroupBox>
+// 引入 Qt 檔案處理類別
 #include <QFile>
+// 引入 Qt 檔案資訊類別
 #include <QFileInfo>
+// 引入 Qt 目錄處理類別
 #include <QDir>
+// 引入 Qt 隨機數產生器類別
 #include <QRandomGenerator>
+// 引入 Qt 標準路徑取得類別
 #include <QStandardPaths>
+// 引入 Qt 分割視窗類別
 #include <QSplitter>
+// 引入 Qt 正則表達式類別
 #include <QRegularExpression>
+// 引入 Qt 文字瀏覽器類別
 #include <QTextBrowser>
+// 引入 Qt 文字串流類別
 #include <QTextStream>
+// 引入 Qt 外部程序類別
 #include <QProcess>
+// 引入 Qt 桌面服務類別
 #include <QDesktopServices>
+// 引入 Qt 計時器類別
 #include <QTimer>
+// 引入 Qt 選單類別
 #include <QMenu>
+// 引入 Qt 滑鼠事件類別
 #include <QMouseEvent>
+// 引入 C++ 數學函式庫
 #include <cmath>
 
-// Anonymous namespace to keep SongSwitchGuard local to this translation unit
+// 匿名命名空間，將 SongSwitchGuard 類別限制在此翻譯單元內
 namespace {
-    // RAII helper class to manage isSwitchingSongs flag
+    // RAII 輔助類別，用於管理 isSwitchingSongs 旗標
     class SongSwitchGuard {
     public:
+        // 建構函式，接收旗標參考並將其設為 true
         explicit SongSwitchGuard(bool& flag) : m_flag(flag) {
+            // 設定旗標為 true，表示正在切換歌曲
             m_flag = true;
         }
+        // 解構函式，自動將旗標設回 false
         ~SongSwitchGuard() {
+            // 重置旗標為 false，表示歌曲切換完成
             m_flag = false;
         }
-        // Prevent copying and moving
+        // 防止複製建構函式（刪除）
         SongSwitchGuard(const SongSwitchGuard&) = delete;
+        // 防止複製賦值運算子（刪除）
         SongSwitchGuard& operator=(const SongSwitchGuard&) = delete;
+        // 防止移動建構函式（刪除）
         SongSwitchGuard(SongSwitchGuard&&) = delete;
+        // 防止移動賦值運算子（刪除）
         SongSwitchGuard& operator=(SongSwitchGuard&&) = delete;
     private:
+        // 儲存旗標的參考
         bool& m_flag;
     };
 }
