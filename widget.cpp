@@ -1246,7 +1246,6 @@ void Widget::playVideo(int index)
     
     playlistWidget->setCurrentRow(index);
 }
-}
 
 void Widget::updateButtonStates()
 {
