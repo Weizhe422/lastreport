@@ -177,12 +177,14 @@ protected:
     bool isProgressSliderPressed;  // 追蹤進度條是否被按下
     bool isMuted;  // 追蹤是否靜音
     int previousVolume;  // 保存靜音前的音量
+    bool isSwitchingSongs;  // 追蹤是否正在手動切換歌曲
     QString lastPlaylistName;
     QSet<int> playedVideosInCurrentSession;
     QRegularExpression subtitleTimestampRegex;  // Regex pattern for parsing subtitle timestamps
     QRegularExpression srtTimestampRegex;  // Regex pattern for parsing SRT timestamp format
     QRegularExpression sequenceNumberRegex;  // Regex pattern for identifying SRT sequence numbers
     QString currentSubtitles;  // 累積的字幕內容，用於整合顯示在主視窗
+    QTimer* titleRestoreTimer;  // Timer for restoring video title after subtitle jump notification
 };
 
 #endif // WIDGET_H

@@ -20,6 +20,27 @@
 #include <QMouseEvent>
 #include <cmath>
 
+// Anonymous namespace to keep SongSwitchGuard local to this translation unit
+namespace {
+    // RAII helper class to manage isSwitchingSongs flag
+    class SongSwitchGuard {
+    public:
+        explicit SongSwitchGuard(bool& flag) : m_flag(flag) {
+            m_flag = true;
+        }
+        ~SongSwitchGuard() {
+            m_flag = false;
+        }
+        // Prevent copying and moving
+        SongSwitchGuard(const SongSwitchGuard&) = delete;
+        SongSwitchGuard& operator=(const SongSwitchGuard&) = delete;
+        SongSwitchGuard(SongSwitchGuard&&) = delete;
+        SongSwitchGuard& operator=(SongSwitchGuard&&) = delete;
+    private:
+        bool& m_flag;
+    };
+}
+
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Widget)
@@ -35,16 +56,22 @@ Widget::Widget(QWidget *parent)
     , isProgressSliderPressed(false)
     , isMuted(false)
     , previousVolume(50)
+    , isSwitchingSongs(false)
     , subtitleTimestampRegex(R"(\[(\d+\.?\d*)s\s*-\s*(\d+\.?\d*)s\])")
     , srtTimestampRegex(R"((\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3}))")
     , sequenceNumberRegex(R"(^\d+$)")
     , currentSubtitles("")
+    , titleRestoreTimer(new QTimer(this))
 {
     ui->setupUi(this);
     
     // 設置媒體播放器
     mediaPlayer->setAudioOutput(audioOutput);
     audioOutput->setVolume(0.5);
+    
+    // 設置標題恢復計時器
+    titleRestoreTimer->setSingleShot(true);
+    connect(titleRestoreTimer, &QTimer::timeout, this, &Widget::restoreCurrentVideoTitle);
     
     // 設置窗口
     setWindowTitle("音樂播放器");
@@ -830,7 +857,8 @@ void Widget::onMediaPlayerStateChanged()
         
         // 本地檔案播放結束，自動播放下一首（如果有）
         // 只有當前正在播放本地檔案時才自動播放下一首
-        if (currentVideoIndex >= 0 && currentPlaylistIndex >= 0 && 
+        // 不在手動切換歌曲時觸發自動播放
+        if (!isSwitchingSongs && currentVideoIndex >= 0 && currentPlaylistIndex >= 0 && 
             currentPlaylistIndex < playlists.size()) {
             const Playlist& playlist = playlists[currentPlaylistIndex];
             if (currentVideoIndex < playlist.videos.size() &&
@@ -1163,6 +1191,12 @@ void Widget::playVideo(int index)
     
     Playlist& playlist = playlists[currentPlaylistIndex];
     if (index < 0 || index >= playlist.videos.size()) return;
+    
+    // 停止標題恢復計時器，確保切換歌曲時立即顯示新歌曲標題
+    titleRestoreTimer->stop();
+    
+    // 使用 RAII guard 確保 isSwitchingSongs 標誌總是被正確重置
+    SongSwitchGuard guard(isSwitchingSongs);
     
     currentVideoIndex = index;
     const VideoInfo& video = playlist.videos[index];
@@ -1629,8 +1663,9 @@ void Widget::onSubtitleLinkClicked(const QUrl& url)
             
             videoTitleLabel->setText(QString("跳轉到 %1").arg(timeDisplay));
             
-            // 2 秒後恢復原標題
-            QTimer::singleShot(2000, this, &Widget::restoreCurrentVideoTitle);
+            // 停止任何正在進行的標題恢復計時器，然後啟動新的
+            titleRestoreTimer->stop();
+            titleRestoreTimer->start(2000);  // 2 秒後恢復原標題
         } else {
             QMessageBox::information(this, "提示", "請先播放音樂後再跳轉到字幕位置。");
         }
