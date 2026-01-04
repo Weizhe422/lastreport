@@ -20,21 +20,26 @@
 #include <QMouseEvent>
 #include <cmath>
 
-// RAII helper class to manage isSwitchingSongs flag
-class SongSwitchGuard {
-public:
-    explicit SongSwitchGuard(bool& flag) : m_flag(flag) {
-        m_flag = true;
-    }
-    ~SongSwitchGuard() {
-        m_flag = false;
-    }
-    // Prevent copying
-    SongSwitchGuard(const SongSwitchGuard&) = delete;
-    SongSwitchGuard& operator=(const SongSwitchGuard&) = delete;
-private:
-    bool& m_flag;
-};
+// Anonymous namespace to keep SongSwitchGuard local to this translation unit
+namespace {
+    // RAII helper class to manage isSwitchingSongs flag
+    class SongSwitchGuard {
+    public:
+        explicit SongSwitchGuard(bool& flag) : m_flag(flag) {
+            m_flag = true;
+        }
+        ~SongSwitchGuard() {
+            m_flag = false;
+        }
+        // Prevent copying and moving
+        SongSwitchGuard(const SongSwitchGuard&) = delete;
+        SongSwitchGuard& operator=(const SongSwitchGuard&) = delete;
+        SongSwitchGuard(SongSwitchGuard&&) = delete;
+        SongSwitchGuard& operator=(SongSwitchGuard&&) = delete;
+    private:
+        bool& m_flag;
+    };
+}
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
