@@ -738,6 +738,9 @@ void Widget::playLocalFile(const QString& filePath)
     // 停止當前播放
     mediaPlayer->stop();
     
+    // 清空字幕顯示
+    currentSubtitles = "";
+    
     // 創建影片資訊
     VideoInfo video;
     video.filePath = filePath;
@@ -1173,6 +1176,9 @@ void Widget::playVideo(int index)
         // 播放本地檔案
         mediaPlayer->setSource(QUrl::fromLocalFile(video.filePath));
         mediaPlayer->play();
+        
+        // 清空字幕顯示
+        currentSubtitles = "";
         
         QFileInfo fileInfo(video.filePath);
         updateLocalMusicDisplay(video.title, fileInfo.fileName(), "");
