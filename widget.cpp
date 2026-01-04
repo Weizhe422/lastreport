@@ -189,6 +189,25 @@ void Widget::setupUI()
     );
     topLayout->addWidget(loadLocalFileButton);
     
+    loadSubtitleButton = new QPushButton("📝 載入字幕檔案", topBar);
+    loadSubtitleButton->setStyleSheet(
+        "QPushButton {"
+        "   background-color: #282828;"
+        "   color: white;"
+        "   border: none;"
+        "   border-radius: 20px;"
+        "   padding: 8px 24px;"
+        "   font-size: 14px;"
+        "   font-weight: bold;"
+        "}"
+        "QPushButton:hover { background-color: #404040; }"
+        "QPushButton:pressed { background-color: #505050; }"
+        "QPushButton:disabled { background-color: #181818; color: #404040; }"
+    );
+    loadSubtitleButton->setEnabled(false);  // 預設禁用，播放音樂時才啟用
+    loadSubtitleButton->setToolTip("載入 .srt 字幕檔案");
+    topLayout->addWidget(loadSubtitleButton);
+    
     mainLayout->addWidget(topBar);
     
     // === 內容區域 ===
@@ -487,6 +506,7 @@ void Widget::createConnections()
 {
     // 本地檔案載入
     connect(loadLocalFileButton, &QPushButton::clicked, this, &Widget::onLoadLocalFileClicked);
+    connect(loadSubtitleButton, &QPushButton::clicked, this, &Widget::onLoadSubtitleFileClicked);
     
     // 播放控制按鈕
     connect(playPauseButton, &QPushButton::clicked, this, &Widget::onPlayPauseClicked);
@@ -607,6 +627,26 @@ void Widget::onLoadLocalFileClicked()
             // 如果沒有播放清單，直接播放
             playLocalFile(filePath);
         }
+    }
+}
+
+void Widget::onLoadSubtitleFileClicked()
+{
+    // 確保正在播放音樂
+    if (!isPlaying) {
+        QMessageBox::information(this, "提示", "請先播放音樂後再載入字幕檔案。");
+        return;
+    }
+    
+    // 選擇字幕檔案
+    QString filePath = QFileDialog::getOpenFileName(this, 
+        "選擇字幕檔案", 
+        QDir::homePath(),
+        "字幕檔案 (*.srt);;所有檔案 (*.*)");
+    
+    if (!filePath.isEmpty()) {
+        // 直接載入 SRT 檔案
+        loadSrt(filePath);
     }
 }
 
@@ -1165,6 +1205,9 @@ void Widget::updateButtonStates()
     bool hasTargetPlaylists = (targetPlaylistComboBox->count() > 0);
     addToPlaylistButton->setEnabled(hasMediaPlaying && hasTargetPlaylists);
     targetPlaylistComboBox->setEnabled(hasMediaPlaying && hasTargetPlaylists);
+    
+    // 更新載入字幕按鈕狀態 - 只在播放中才啟用
+    loadSubtitleButton->setEnabled(isPlaying);
 }
 
 void Widget::savePlaylistsToFile()
