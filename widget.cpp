@@ -20,6 +20,22 @@
 #include <QMouseEvent>
 #include <cmath>
 
+// RAII helper class to manage isSwitchingSongs flag
+class SongSwitchGuard {
+public:
+    explicit SongSwitchGuard(bool& flag) : m_flag(flag) {
+        m_flag = true;
+    }
+    ~SongSwitchGuard() {
+        m_flag = false;
+    }
+    // Prevent copying
+    SongSwitchGuard(const SongSwitchGuard&) = delete;
+    SongSwitchGuard& operator=(const SongSwitchGuard&) = delete;
+private:
+    bool& m_flag;
+};
+
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Widget)
@@ -1174,8 +1190,8 @@ void Widget::playVideo(int index)
     // 停止標題恢復計時器，確保切換歌曲時立即顯示新歌曲標題
     titleRestoreTimer->stop();
     
-    // 設置標誌表示正在手動切換歌曲，防止自動播放下一首被觸發
-    isSwitchingSongs = true;
+    // 使用 RAII guard 確保 isSwitchingSongs 標誌總是被正確重置
+    SongSwitchGuard guard(isSwitchingSongs);
     
     currentVideoIndex = index;
     const VideoInfo& video = playlist.videos[index];
@@ -1224,9 +1240,7 @@ void Widget::playVideo(int index)
     updateButtonStates();
     
     playlistWidget->setCurrentRow(index);
-    
-    // 清除手動切換歌曲的標誌
-    isSwitchingSongs = false;
+}
 }
 
 void Widget::updateButtonStates()
